@@ -72,8 +72,9 @@ public class TickerView extends View {
 
     protected final Paint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
 
+    private final TickerTextColors colors = new TickerTextColors();
     private final TickerDrawMetrics metrics = new TickerDrawMetrics(textPaint);
-    private final TickerColumnManager columnManager = new TickerColumnManager(metrics);
+    private final TickerColumnManager columnManager = new TickerColumnManager(metrics, colors);
     private final ValueAnimator animator = ValueAnimator.ofFloat(1f);
 
     // Minor optimizations for re-positioning the canvas for the composer.
@@ -85,7 +86,6 @@ public class TickerView extends View {
 
     // View attributes, defaults are set in init().
     private int gravity;
-    private int textColor;
     private float textSize;
     private int textStyle;
     private long animationDelayInMillis;
@@ -167,7 +167,14 @@ public class TickerView extends View {
             setTypeface(textPaint.getTypeface());
         }
 
-        setTextColor(styledAttributes.textColor);
+        int textColor = styledAttributes.textColor;
+        int inProgressTextColor = arr.getColor(R.styleable.TickerView_ticker_inProgressTextColor,
+                textColor);
+
+        colors.setTextColor(textColor);
+        colors.setInProgressTextColor(inProgressTextColor);
+
+        setTextColor(textColor);
         setTextSize(styledAttributes.textSize);
 
         final int defaultCharList =
@@ -364,7 +371,7 @@ public class TickerView extends View {
      * @return the current text color that's being used to draw the text.
      */
     public int getTextColor() {
-        return textColor;
+        return colors.getTextColor(false);
     }
 
     /**
@@ -374,9 +381,23 @@ public class TickerView extends View {
      * @param color the color to set the text to.
      */
     public void setTextColor(int color) {
-        if (this.textColor != color) {
-            textColor = color;
-            textPaint.setColor(textColor);
+        if (colors.isNewColor(color)) {
+            colors.setTextColor(color);
+            textPaint.setColor(colors.getTextColor(false));
+            invalidate();
+        }
+    }
+
+    /**
+     * @return the text color that's being used to draw the text when animation in progress.
+     */
+    public int getInProgressTextColor() {
+        return colors.getTextColor(true);
+    }
+
+    public void setInProgressTextColor(int color) {
+        if (colors.isNewInProgressTextColor(color)) {
+            colors.setInProgressTextColor(color);
             invalidate();
         }
     }

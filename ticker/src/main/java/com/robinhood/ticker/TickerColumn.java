@@ -29,6 +29,7 @@ import android.graphics.Paint;
 class TickerColumn {
     private final TickerCharacterList[] characterLists;
     private final TickerDrawMetrics metrics;
+    private TickerTextColors colors;
 
     private char currentChar = TickerUtils.EMPTY_CHAR;
     private char targetChar = TickerUtils.EMPTY_CHAR;
@@ -57,9 +58,15 @@ class TickerColumn {
     private float previousBottomDelta;
     private int directionAdjustment;
 
-    TickerColumn(TickerCharacterList[] characterLists, TickerDrawMetrics metrics) {
+    // needs for cases when we displaying numbers in different formats
+    // for example 3.333.333 or 5,555,555 and want to change text color for separator
+    private boolean previousColumnChanging;
+
+    TickerColumn(TickerCharacterList[] characterLists, TickerDrawMetrics metrics,
+                 TickerTextColors colors) {
         this.characterLists = characterLists;
         this.metrics = metrics;
+        this.colors = colors;
     }
 
     /**
@@ -103,6 +110,15 @@ class TickerColumn {
     float getMinimumRequiredWidth() {
         checkForDrawMetricsChanges();
         return minimumRequiredWidth;
+    }
+
+    void setPreviousColumnChanging(boolean changing) {
+        this.previousColumnChanging = changing;
+    }
+
+    // @return changing state for column
+    boolean isChanging() {
+        return currentChar != targetChar || previousColumnChanging;
     }
 
     /**
@@ -232,6 +248,10 @@ class TickerColumn {
      */
     private boolean drawText(Canvas canvas, Paint textPaint, char[] characterList,
             int index, float verticalOffset) {
+
+        int paintTextColor = colors.getTextColor(isChanging() || previousColumnChanging);
+        textPaint.setColor(paintTextColor);
+
         if (index >= 0 && index < characterList.length) {
             canvas.drawText(characterList, index, 1, 0f, verticalOffset, textPaint);
             return true;

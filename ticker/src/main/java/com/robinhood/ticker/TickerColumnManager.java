@@ -36,12 +36,14 @@ import java.util.Set;
 class TickerColumnManager {
     final ArrayList<TickerColumn> tickerColumns = new ArrayList<>();
     private final TickerDrawMetrics metrics;
+    private final TickerTextColors colors;
 
     private TickerCharacterList[] characterLists;
     private Set<Character> supportedCharacters;
 
-    TickerColumnManager(TickerDrawMetrics metrics) {
+    TickerColumnManager(TickerDrawMetrics metrics, TickerTextColors colors) {
         this.metrics = metrics;
+        this.colors = colors;
     }
 
     /**
@@ -91,7 +93,7 @@ class TickerColumnManager {
             switch (actions[i]) {
                 case LevenshteinUtils.ACTION_INSERT:
                     tickerColumns.add(columnIndex,
-                            new TickerColumn(characterLists, metrics));
+                            new TickerColumn(characterLists, metrics, colors));
                     // Intentional fallthrough
                 case LevenshteinUtils.ACTION_SAME:
                     tickerColumns.get(columnIndex).setTargetChar(text[textIndex]);
@@ -153,10 +155,16 @@ class TickerColumnManager {
      * accordingly for the draw procedures.
      */
     void draw(Canvas canvas, Paint textPaint) {
+        TickerColumn prevColumn = null;
         for (int i = 0, size = tickerColumns.size(); i < size; i++) {
             final TickerColumn column = tickerColumns.get(i);
+            final boolean prevColumnChanging = prevColumn != null && prevColumn.isChanging();
+
+            column.setPreviousColumnChanging(prevColumnChanging);
             column.draw(canvas, textPaint);
             canvas.translate(column.getCurrentWidth(), 0f);
+
+            prevColumn = column;
         }
     }
 }
