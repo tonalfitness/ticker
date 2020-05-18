@@ -223,8 +223,9 @@ class TickerColumn {
      * progress and the previously interrupted animation state to render the characters
      * in the correct position on the canvas.
      */
-    void draw(Canvas canvas, Paint textPaint) {
-        if (drawText(canvas, textPaint, currentCharacterList, bottomCharIndex, bottomDelta)) {
+    void draw(Canvas canvas, Paint textPaint, int[] drawableState) {
+        if (drawText(canvas, textPaint, currentCharacterList, bottomCharIndex, bottomDelta,
+                drawableState)) {
             // Save the current drawing state in case our animation gets interrupted
             if (bottomCharIndex >= 0) {
                 currentChar = currentCharacterList[bottomCharIndex];
@@ -234,22 +235,23 @@ class TickerColumn {
 
         // Draw the corresponding top and bottom characters if applicable
         drawText(canvas, textPaint, currentCharacterList, bottomCharIndex + 1,
-                bottomDelta - charHeight);
+                bottomDelta - charHeight, drawableState);
         // Drawing the bottom character here might seem counter-intuitive because we've been
         // computing for the bottom character this entire time. But the bottom character
         // computed above might actually be above the baseline if we interrupted a previous
         // animation that gave us a positive additionalDelta.
         drawText(canvas, textPaint, currentCharacterList, bottomCharIndex - 1,
-                bottomDelta + charHeight);
+                bottomDelta + charHeight, drawableState);
     }
 
     /**
      * @return whether the text was successfully drawn on the canvas
      */
     private boolean drawText(Canvas canvas, Paint textPaint, char[] characterList,
-            int index, float verticalOffset) {
+            int index, float verticalOffset, int[] drawableState) {
 
-        int paintTextColor = colors.getTextColor(isChanging() || previousColumnChanging);
+        int paintTextColor = colors.getTextColor(isChanging() || previousColumnChanging,
+                drawableState);
         textPaint.setColor(paintTextColor);
 
         if (index >= 0 && index < characterList.length) {

@@ -4,7 +4,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:tools="http://schemas.android.com/tools"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:duplicateParentState="true">
 
     <com.robinhood.ticker.TickerView
         android:id="@+id/ticker1"
@@ -17,9 +18,10 @@
         android:shadowDy="1"
         android:shadowRadius="2"
         android:text="1234567"
-        android:textColor="?colorPrimary"
+        android:textColor="@color/ticker1colors"
         android:textSize="50sp"
         app:ticker_animationDuration="500"
+        app:ticker_inProgressTextColor="#0000FF"
         app:ticker_defaultCharacterList="number" />
 
     <com.robinhood.ticker.TickerView

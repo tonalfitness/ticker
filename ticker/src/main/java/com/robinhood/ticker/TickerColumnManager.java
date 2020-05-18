@@ -154,14 +154,14 @@ class TickerColumnManager {
      * by {@param animationProgress}. As a side effect, this method will also translate the canvas
      * accordingly for the draw procedures.
      */
-    void draw(Canvas canvas, Paint textPaint) {
+    void draw(Canvas canvas, Paint textPaint, int[] drawableState) {
         TickerColumn prevColumn = null;
         for (int i = 0, size = tickerColumns.size(); i < size; i++) {
             final TickerColumn column = tickerColumns.get(i);
             final boolean prevColumnChanging = prevColumn != null && prevColumn.isChanging();
 
             column.setPreviousColumnChanging(prevColumnChanging);
-            column.draw(canvas, textPaint);
+            column.draw(canvas, textPaint, drawableState);
             canvas.translate(column.getCurrentWidth(), 0f);
 
             prevColumn = column;
