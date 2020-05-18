@@ -704,6 +704,7 @@ public class TickerView extends View {
         invalidate();
 
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            performClick();
             return true;
         }
         return super.onTouchEvent(event);
