@@ -36,12 +36,14 @@ import java.util.Set;
 class TickerColumnManager {
     final ArrayList<TickerColumn> tickerColumns = new ArrayList<>();
     private final TickerDrawMetrics metrics;
+    private final TickerTextColors colors;
 
     private TickerCharacterList[] characterLists;
     private Set<Character> supportedCharacters;
 
-    TickerColumnManager(TickerDrawMetrics metrics) {
+    TickerColumnManager(TickerDrawMetrics metrics, TickerTextColors colors) {
         this.metrics = metrics;
+        this.colors = colors;
     }
 
     /**
@@ -91,7 +93,7 @@ class TickerColumnManager {
             switch (actions[i]) {
                 case LevenshteinUtils.ACTION_INSERT:
                     tickerColumns.add(columnIndex,
-                            new TickerColumn(characterLists, metrics));
+                            new TickerColumn(characterLists, metrics, colors));
                     // Intentional fallthrough
                 case LevenshteinUtils.ACTION_SAME:
                     tickerColumns.get(columnIndex).setTargetChar(text[textIndex]);
@@ -152,11 +154,17 @@ class TickerColumnManager {
      * by {@param animationProgress}. As a side effect, this method will also translate the canvas
      * accordingly for the draw procedures.
      */
-    void draw(Canvas canvas, Paint textPaint) {
+    void draw(Canvas canvas, Paint textPaint, int[] drawableState) {
+        TickerColumn prevColumn = null;
         for (int i = 0, size = tickerColumns.size(); i < size; i++) {
             final TickerColumn column = tickerColumns.get(i);
-            column.draw(canvas, textPaint);
+            final boolean prevColumnChanging = prevColumn != null && prevColumn.isChanging();
+
+            column.setPreviousColumnChanging(prevColumnChanging);
+            column.draw(canvas, textPaint, drawableState);
             canvas.translate(column.getCurrentWidth(), 0f);
+
+            prevColumn = column;
         }
     }
 }

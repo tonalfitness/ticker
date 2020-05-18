@@ -1,6 +1,8 @@
 package com.robinhood.ticker;
 
+import android.content.res.ColorStateList;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.text.TextPaint;
 
 import org.junit.Before;
@@ -25,6 +27,7 @@ public class TickerColumnTest {
     @Mock TickerDrawMetrics metrics;
     @Mock Canvas canvas;
     @Mock TextPaint paint;
+    @Mock TickerTextColors tickerTextColors;
 
     private TickerColumn tickerColumn;
 
@@ -36,10 +39,13 @@ public class TickerColumnTest {
         when(metrics.getCharWidth(anyChar())).thenReturn(DEFAULT_CHAR_WIDTH);
         when(metrics.getCharWidth(TickerUtils.EMPTY_CHAR)).thenReturn(0f);
         when(metrics.getPreferredScrollingDirection()).thenReturn(TickerView.ScrollingDirection.ANY);
+        when(tickerTextColors.getTextColor(false, new int[] {})).thenReturn(Color.BLACK);
+
 
         tickerColumn = new TickerColumn(
                 new TickerCharacterList[] { characterList },
-                metrics
+                metrics,
+                tickerTextColors
         );
     }
 
@@ -273,7 +279,7 @@ public class TickerColumnTest {
 
     private void setProgress(float progress) {
         tickerColumn.setAnimationProgress(progress);
-        tickerColumn.draw(canvas, paint);
+        tickerColumn.draw(canvas, paint, new int[] {});
     }
 
     private void verifyDraw(int index, float offset) {

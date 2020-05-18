@@ -22,7 +22,9 @@ public class TickerColumnManagerTest {
         when(metrics.getCharWidth(TickerUtils.EMPTY_CHAR)).thenReturn(0f);
         when(metrics.getPreferredScrollingDirection()).thenReturn(TickerView.ScrollingDirection.ANY);
 
-        tickerColumnManager = new TickerColumnManager(metrics);
+
+
+        tickerColumnManager = new TickerColumnManager(metrics, new TickerTextColors());
         tickerColumnManager.setCharacterLists("1234567890");
     }
 

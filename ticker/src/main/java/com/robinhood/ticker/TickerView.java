@@ -19,8 +19,10 @@ package com.robinhood.ticker;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.BlurMaskFilter;
@@ -30,14 +32,21 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.os.Build;
+import android.text.Spannable;
 import android.text.TextPaint;
 import android.text.TextUtils;
+import android.text.style.ClickableSpan;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.Interpolator;
+import android.view.inputmethod.InputMethodManager;
+
+import java.util.Arrays;
 
 /**
  * The primary view for showing a ticker text view that handles smoothly scrolling from the
@@ -72,8 +81,9 @@ public class TickerView extends View {
 
     protected final Paint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
 
+    private final TickerTextColors colors = new TickerTextColors();
     private final TickerDrawMetrics metrics = new TickerDrawMetrics(textPaint);
-    private final TickerColumnManager columnManager = new TickerColumnManager(metrics);
+    private final TickerColumnManager columnManager = new TickerColumnManager(metrics, colors);
     private final ValueAnimator animator = ValueAnimator.ofFloat(1f);
 
     // Minor optimizations for re-positioning the canvas for the composer.
@@ -85,7 +95,6 @@ public class TickerView extends View {
 
     // View attributes, defaults are set in init().
     private int gravity;
-    private int textColor;
     private float textSize;
     private int textStyle;
     private long animationDelayInMillis;
@@ -123,10 +132,10 @@ public class TickerView extends View {
      *     <li>app:textSize
      * </ul>
      *
-     * @param context context from constructor
-     * @param attrs attrs from constructor
+     * @param context      context from constructor
+     * @param attrs        attrs from constructor
      * @param defStyleAttr defStyleAttr from constructor
-     * @param defStyleRes defStyleRes from constructor
+     * @param defStyleRes  defStyleRes from constructor
      */
     protected void init(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         final Resources res = context.getResources();
@@ -167,7 +176,12 @@ public class TickerView extends View {
             setTypeface(textPaint.getTypeface());
         }
 
-        setTextColor(styledAttributes.textColor);
+        ColorStateList textColor = styledAttributes.textColor;
+        int inProgressTextColor = arr.getColor(R.styleable.TickerView_ticker_inProgressTextColor,
+                textColor.getDefaultColor());
+
+        setTextColor(textColor);
+        setInProgressTextColor(inProgressTextColor);
         setTextSize(styledAttributes.textSize);
 
         final int defaultCharList =
@@ -232,19 +246,19 @@ public class TickerView extends View {
     /**
      * Only attributes that can be applied from `android:textAppearance` should be added here.
      */
-    private class StyledAttributes {
+    private static class StyledAttributes {
         int gravity;
         int shadowColor;
         float shadowDx;
         float shadowDy;
         float shadowRadius;
         String text;
-        int textColor;
+        ColorStateList textColor;
         float textSize;
         int textStyle;
 
         StyledAttributes(Resources res) {
-            textColor = DEFAULT_TEXT_COLOR;
+            textColor = ColorStateList.valueOf(DEFAULT_TEXT_COLOR);
             textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP,
                     DEFAULT_TEXT_SIZE, res.getDisplayMetrics());
             gravity = DEFAULT_GRAVITY;
@@ -259,7 +273,11 @@ public class TickerView extends View {
             shadowRadius = arr.getFloat(R.styleable.TickerView_android_shadowRadius,
                     shadowRadius);
             text = arr.getString(R.styleable.TickerView_android_text);
-            textColor = arr.getColor(R.styleable.TickerView_android_textColor, textColor);
+
+            ColorStateList newTextColor = arr.getColorStateList(R.styleable.TickerView_android_textColor);
+            if (newTextColor != null) {
+                textColor = newTextColor;
+            }
             textSize = arr.getDimension(R.styleable.TickerView_android_textSize, textSize);
             textStyle = arr.getInt(R.styleable.TickerView_android_textStyle, textStyle);
         }
@@ -364,7 +382,7 @@ public class TickerView extends View {
      * @return the current text color that's being used to draw the text.
      */
     public int getTextColor() {
-        return textColor;
+        return colors.getTextColor(false, getDrawableState());
     }
 
     /**
@@ -374,9 +392,34 @@ public class TickerView extends View {
      * @param color the color to set the text to.
      */
     public void setTextColor(int color) {
-        if (this.textColor != color) {
-            textColor = color;
-            textPaint.setColor(textColor);
+        if (colors.isNewColor(color)) {
+            colors.setTextColor(color);
+            invalidate();
+        }
+    }
+
+    /**
+     * Sets the text color used by this view. The default text color is defined by
+     * {@link #DEFAULT_TEXT_COLOR}.
+     *
+     * @param colors the colors to set the text to.
+     */
+
+    public void setTextColor(ColorStateList colors) {
+        this.colors.setTextColor(colors);
+        invalidate();
+    }
+
+    /**
+     * @return the text color that's being used to draw the text when animation in progress.
+     */
+    public int getInProgressTextColor() {
+        return colors.getTextColor(true, getDrawableState());
+    }
+
+    public void setInProgressTextColor(int color) {
+        if (colors.isNewInProgressTextColor(color)) {
+            colors.setInProgressTextColor(color);
             invalidate();
         }
     }
@@ -649,9 +692,22 @@ public class TickerView extends View {
         // canvas.drawText writes the text on the baseline so we need to translate beforehand.
         canvas.translate(0f, metrics.getCharBaseline());
 
-        columnManager.draw(canvas, textPaint);
+        columnManager.draw(canvas, textPaint, getDrawableState());
 
         canvas.restore();
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        setPressed(event.getAction() == MotionEvent.ACTION_DOWN);
+        invalidate();
+
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            performClick();
+            return true;
+        }
+        return super.onTouchEvent(event);
     }
 
     private void realignAndClipCanvasForGravity(Canvas canvas) {
@@ -662,7 +718,7 @@ public class TickerView extends View {
 
     // VisibleForTesting
     static void realignAndClipCanvasForGravity(Canvas canvas, int gravity, Rect viewBounds,
-            float currentWidth, float currentHeight) {
+                                               float currentWidth, float currentHeight) {
         final int availableWidth = viewBounds.width();
         final int availableHeight = viewBounds.height();
 
